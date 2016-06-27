@@ -2349,6 +2349,14 @@ th {
 .table .table {
   background-color: #ffffff;
 }
+.table td .media{
+	max-width:28px;
+	max-height:28px;
+	background:#efefef;
+	margin-top:-6px;
+	position:relative;
+	top:2px;
+}
 .table-condensed > thead > tr > th,
 .table-condensed > tbody > tr > th,
 .table-condensed > tfoot > tr > th,
@@ -4153,6 +4161,16 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
     margin-bottom: 0;
   }
 }
+
+/* Fix for plugin tabs */
+html[buildfire='control'] .nav-tabs.nav-justified > li {
+    display: table-cell;
+    width: 1%;
+  }
+html[buildfire='control'] .nav-tabs.nav-justified > li > a {
+    margin-bottom: 0;
+}
+
 .nav-tabs.nav-justified > li > a {
   margin-right: 0;
 }
@@ -8448,6 +8466,23 @@ html:not([buildfire]) .col-md-12{
 	background:#000 !important;
 }
 
+/* Borders */
+.border-primary{
+	border:1px solid #09a3ee;
+}
+.border-success{
+	border:1px solid #14cb5d;
+}
+.border-info{
+	border:1px solid #32373a;
+}
+.border-warning{
+	border:1px solid #ffb23e;
+}
+.border-danger{
+	border:1px solid #ed4b4b;
+}
+
 
 /* Modal for Plugins */
 html[buildfire] .modal .modal-dialog{
@@ -8460,6 +8495,20 @@ html[buildfire] .modal-backdrop {
 
 html[buildfire] .modal-backdrop.in{
   opacity:0.9;
+}
+
+/* Vertically center widget modals */
+html[type='app'] .modal{
+	height:100%;
+	/*background:rgba(0,0,0,0.8);*/
+}
+html[type='app'] .modal .modal-dialog{
+	position:relative;
+	top:50%;
+	transform:translateY(-50%) !important;
+	margin:0 15px !important;
+	max-height:90%;
+	overflow-y:auto;
 }
 
 /* Confirmation Popups */
