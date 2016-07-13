@@ -9,7 +9,12 @@ function Packet(id, cmd, data) {
 
 /// ref: https://github.com/BuildFire/sdk/wiki
 var buildfire = {
-    logger: {
+    isFileServer: function(url){
+        return (url.indexOf("s3.amazonaws.com") !== -1);
+    }
+    , isWeb: function(){
+        return (window.location.protocol.indexOf("http") == 0);
+    }, logger: {
         _suppress: false
         ,attachRemoteLogger:function (tag){
 
@@ -1119,6 +1124,10 @@ var buildfire = {
             var p = new Packet(null, 'imageLib.showDialog', options);
             buildfire._sendPacket(p, callback);
         }
+        ,isProdImageServer: function(url){
+            return ((url.indexOf("http://imageserver.prod.s3.amazonaws.com") == 0
+            || url.indexOf("https://imageserver.prod.s3.amazonaws.com") == 0));
+        }
         //options:{
         // width: integer or 'full'
         // height: integer or 'full'
@@ -1143,7 +1152,7 @@ var buildfire = {
 
             var root;
 
-            if(url.indexOf("http://imageserver.prod.s3.amazonaws.com") == 0 || url.indexOf("https://imageserver.prod.s3.amazonaws.com") == 0){
+            if(buildfire.imageLib.isProdImageServer(url)){
                 url = url.replace(/^https:\/\//i, 'http://');
                 root ="http://buildfire.imgix.net" + url.substring(40); // length of root host
             }
@@ -1178,7 +1187,7 @@ var buildfire = {
 
         , cropImage: function (url, options) {
 
-            var ratio = options.disablePixelRation?1:window.devicePixelRatio;
+            var ratio = options.disablePixelRatio ?1:window.devicePixelRatio;
 
             if (typeof(options) != "object")
                 throw ("options not an object");
@@ -1197,7 +1206,7 @@ var buildfire = {
 
             var root;
 
-            if(url.indexOf("http://imageserver.prod.s3.amazonaws.com") == 0||url.indexOf("https://imageserver.prod.s3.amazonaws.com") == 0){
+            if(buildfire.imageLib.isProdImageServer(url)){
                 url = url.replace(/^https:\/\//i, 'http://');
                 root ="http://buildfire.imgix.net" + url.substring(40); // length of root host
             }
@@ -1229,7 +1238,7 @@ var buildfire = {
                     return sections[sections.length - 1];
             }
             , toLocalPath: function (url) {
-                if (url.toLowerCase().indexOf("/imageserver") > 0) {
+                if (buildfire.isFileServer(url)) {
                     var localURL = this.localImageLibPath + this.parseFileFromUrl(url); // length of root host
                     //localURL = localURL.substring(localURL.indexOf('/'));
                     return localURL;
@@ -1279,8 +1288,8 @@ var buildfire = {
 
             }
             , cropImage: function (url, options, callback) {
+                var ratio = options.disablePixelRatio ? 1 : window.devicePixelRatio;
 
-                //var ratio = options.disablePixelRation ? 1 : window.devicePixelRatio;
                 if (!options)
                     options = {width: window.innerWidth};
                 else if (typeof(options) != "object")
@@ -1289,20 +1298,35 @@ var buildfire = {
                 if (options.width == 'full') options.width = window.innerWidth;
                 if (options.height == 'full') options.height = window.innerHeight;
 
+                //If SmartCrop isn't included, use buildfire.imageLib.cropImage
+                if(typeof(SmartCrop) == "undefined"){
+                    console.warn("SmartCrop.js isnt imported");
+                    callback(null, buildfire.imageLib.cropImage(url, options));
+                    return;
+                }
 
-                if(typeof(SmartCrop) == "undefined")
-                    console.warn("smartcrop.js isnt imported");
+                //If we are in a web environment, use buildfire.imageLib.cropImage
+                if(buildfire.isWeb()){
+                    callback(null, buildfire.imageLib.cropImage(url, options));
+                    return;
+                }
 
-
-
-                if (url.indexOf("http://imageserver.prod.s3.amazonaws.com") == 0 || url.indexOf("https://imageserver.prod.s3.amazonaws.com") == 0) {
+                //If image is coming from S3, and in an app, try to use SmartCrop
+                if (buildfire.isFileServer(url) ) {
                     url = url.replace(/^https:\/\//i, 'http://');
 
                     var localURL = buildfire.imageLib.local.toLocalPath(url);
+
                     if (localURL && typeof(SmartCrop) != "undefined") {
                         var img = new Image();
                         img.src = localURL;
+                        
                         img.onload = function () {
+                            if(options.width)
+                                options.width = Math.floor(options.width * ratio);
+
+                            if(options.height)
+                                options.height = Math.floor(options.height * ratio);
 
                             if (options.width && !options.height)
                                 options.height = (img.height * options.width) / img.width;
@@ -1318,13 +1342,12 @@ var buildfire = {
 
                                 var sug = result.topCrop;
                                 ctx.drawImage(img, sug.x, sug.y, sug.width, sug.height,0,0,options.width, options.height);
-
                                 callback(null, canvas.toDataURL());
-
                             });
 
                         };
-                        img.onerror = function () {
+                        img.onerror = function (e) {
+                            console.warn(e.message);
                             callback(null, buildfire.imageLib.cropImage(url, options));
                         }
                     }
@@ -1333,7 +1356,6 @@ var buildfire = {
                 }
                 else
                     callback(null, buildfire.imageLib.cropImage(url, options));
-
 
             }
         }
@@ -1521,6 +1543,10 @@ var buildfire = {
         openProfile: function (userId) {
             var p = new Packet(null, 'auth.openProfile', userId);
             buildfire._sendPacket(p);
+        },
+        getUserProfile: function (options, callback) {
+            var p = new Packet(null, 'auth.getUserProfile', options);
+            buildfire._sendPacket(p, callback);
         }
     }
     /// ref: https://github.com/BuildFire/sdk/wiki/BuildFire-Device-Features
